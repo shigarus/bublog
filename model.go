@@ -18,8 +18,8 @@ type Model struct {
 	LogContent        string
 }
 
-func New(additionalWriters []io.Writer) Model {
-	return Model{&viewport.Model{}, additionalWriters, ""}
+func New(additionalWriters []io.Writer) *Model {
+	return &Model{&viewport.Model{}, additionalWriters, ""}
 }
 
 func (m *Model) Init() tea.Cmd {

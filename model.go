@@ -14,8 +14,12 @@ import (
 
 type Model struct {
 	LogView           *viewport.Model
-	LogContent        string
 	AdditionalWriters []io.Writer
+	LogContent        string
+}
+
+func New(additionalWriters []io.Writer) Model {
+	return Model{&viewport.Model{}, additionalWriters, ""}
 }
 
 func (m *Model) Init() tea.Cmd {

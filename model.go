@@ -7,32 +7,78 @@ import (
 	"errors"
 	"io"
 
-	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-type Model struct {
-	LogView           *viewport.Model
-	AdditionalWriters []io.Writer
-	LogContent        string
+type KeyMap struct {
+	StickToBottom key.Binding
+	ScrollDown    key.Binding
+	ScrollUp      key.Binding
 }
 
-func New(additionalWriters []io.Writer) *Model {
-	return &Model{&viewport.Model{}, additionalWriters, ""}
+type Model struct {
+	AdditionalWriters []io.Writer
+	Viewer            *TextViewer
+	KeyMap            *KeyMap
+}
+
+var _ tea.Model = &Model{}
+
+func NewModel(initialText string, additionalWriters ...io.Writer) *Model {
+	v := NewTextViewer([]rune(initialText))
+	v.SwitchStickToBottom()
+	return &Model{additionalWriters, v, DefaultKeyMap()}
+}
+
+func DefaultKeyMap() *KeyMap {
+	return &KeyMap{
+		StickToBottom: key.NewBinding(
+			key.WithKeys("S"),
+			key.WithHelp("S", "Switch stick to bottom"),
+		),
+		ScrollDown: key.NewBinding(
+			key.WithKeys("j", tea.KeyDown.String()),
+			key.WithHelp("j/↓", "Scroll down"),
+		),
+		ScrollUp: key.NewBinding(
+			key.WithKeys("k", tea.KeyUp.String()),
+			key.WithHelp("k/↑", "Scroll up"),
+		),
+	}
 }
 
 func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (viewport.Model, tea.Cmd) {
-	res, cmd := m.LogView.Update(msg)
-	return res, cmd
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.SetSize(msg.Width, msg.Height)
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.KeyMap.ScrollDown):
+			m.Viewer.ScrollDown()
+			return m, nil
+		case key.Matches(msg, m.KeyMap.ScrollUp):
+			m.Viewer.ScrollUp()
+			return m, nil
+		case key.Matches(msg, m.KeyMap.StickToBottom):
+			m.Viewer.SwitchStickToBottom()
+		}
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m *Model) View() string {
-	return m.LogView.View()
+	toShow := make([]rune, 0, m.Viewer.Height*m.Viewer.Width)
+	for _, line := range m.Viewer.View() {
+		toShow = append(toShow, line...)
+	}
+	return string(toShow)
 }
 
 // SetSize accepts up to two arguments. First fill be Width, second - Height.
@@ -40,9 +86,9 @@ func (m *Model) SetSize(sizes ...int) {
 	for i, size := range sizes {
 		switch i {
 		case 0:
-			m.LogView.Width = size
+			m.Viewer.SetWidth(size)
 		case 1:
-			m.LogView.Height = size
+			m.Viewer.SetHeight(size)
 		}
 	}
 }
@@ -54,13 +100,6 @@ func (m *Model) Write(p []byte) (n int, err error) {
 		_, wErr := w.Write(p)
 		errs = append(errs, wErr)
 	}
-	m.LogContent += string(p)
-	m.LogView.SetContent(m.fitLogs())
-	m.LogView.GotoBottom()
+	m.Viewer.AppendToText(string(p))
 	return len(p), errors.Join(errs...)
-}
-
-func (m *Model) fitLogs() string {
-	fitTo := m.LogView.Width - m.LogView.Style.GetHorizontalFrameSize()
-	return lipgloss.NewStyle().Width(fitTo).Render(m.LogContent)
 }

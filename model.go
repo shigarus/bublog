@@ -24,6 +24,7 @@ type Model struct {
 }
 
 var _ tea.Model = &Model{}
+var _ io.Writer = &Model{}
 
 func NewModel(initialText string, additionalWriters ...io.Writer) *Model {
 	v := NewTextViewer([]rune(initialText))

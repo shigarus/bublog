@@ -95,10 +95,7 @@ func (t *TextViewer) ScrollTextDown() bool {
 }
 
 func (t *TextViewer) ScrollUp() bool {
-	if len(t.DisplayText) == 0 {
-		return false
-	}
-	if t.SubLineInDisplayText == 0 {
+	if len(t.DisplayText) == 0 || t.SubLineInDisplayText == 0 {
 		if t.ScrollTextUp() {
 			t.SubLineInDisplayText = len(t.DisplayText[0]) - 1
 			return true
@@ -110,10 +107,7 @@ func (t *TextViewer) ScrollUp() bool {
 }
 
 func (t *TextViewer) ScrollDown() bool {
-	if len(t.DisplayText) == 0 {
-		return false
-	}
-	if t.SubLineInDisplayText >= len(t.DisplayText[0])-1 {
+	if len(t.DisplayText) == 0 || t.SubLineInDisplayText >= len(t.DisplayText[0])-1 {
 		if t.ScrollTextDown() {
 			t.SubLineInDisplayText = 0
 			return true
@@ -138,6 +132,7 @@ func (t *TextViewer) SwitchStickToBottom() {
 func (t *TextViewer) AppendToText(s string) {
 	t.Text = append(t.Text, []rune(s))
 	if t.StickedToBottom {
+		// TODO: add to DisplayText
 		for t.ScrollDown() {
 		}
 	}

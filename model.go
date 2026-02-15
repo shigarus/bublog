@@ -78,6 +78,7 @@ func (m *Model) View() string {
 	toShow := make([]rune, 0, m.Viewer.Height*m.Viewer.Width)
 	for _, line := range m.Viewer.View() {
 		toShow = append(toShow, line...)
+		toShow = append(toShow, '\n')
 	}
 	return string(toShow)
 }
